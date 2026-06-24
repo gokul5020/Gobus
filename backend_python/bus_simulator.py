@@ -22,6 +22,17 @@ simulated_buses = [
 
 sio_instance = None
 
+
+def _eta_seconds(bus):
+    """Estimated seconds until a dispatched bus reaches its target stop."""
+    if bus["targetLat"] is None or bus["targetLng"] is None or bus["speed"] <= 0:
+        return None
+    dx = bus["targetLat"] - bus["lat"]
+    dy = bus["targetLng"] - bus["lng"]
+    dist = math.sqrt(dx * dx + dy * dy)
+    return max(1, round(dist / bus["speed"]))
+
+
 async def update_buses():
     global sio_instance
     while True:
@@ -55,7 +66,8 @@ async def update_buses():
                         "name": b["name"],
                         "lat": b["lat"],
                         "lng": b["lng"],
-                        "isDispatched": b["isDispatched"]
+                        "isDispatched": b["isDispatched"],
+                        "etaSeconds": _eta_seconds(b) if b["isDispatched"] else None,
                     } for b in simulated_buses
                 ])
         except Exception as e:

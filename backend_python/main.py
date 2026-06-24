@@ -11,7 +11,8 @@ if sys.platform.startswith("win"):
 
 import socketio
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from database import connect_db
@@ -35,6 +36,22 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(title="Smart Bus Monitoring API", lifespan=lifespan)
+
+# Global HTTPException handler to map to standard {"message": ...} expected by the React frontend
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if isinstance(exc.detail, dict):
+        content = exc.detail
+        if "message" not in content and "detail" in content:
+            content["message"] = content["detail"]
+        elif "message" not in content:
+            content["message"] = str(content)
+        return JSONResponse(status_code=exc.status_code, content=content)
+    else:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"message": exc.detail}
+        )
 
 # Add CORS Middleware
 app.add_middleware(

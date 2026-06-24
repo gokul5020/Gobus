@@ -270,7 +270,7 @@ async def send_all(
     }).to_list(None)
     
     if not pending:
-        raise HTTPException(status_code=44, detail="No pending requests found")
+        raise HTTPException(status_code=404, detail="No pending requests found")
         
     sent_at = datetime.utcnow()
     await db.requests.update_many(
@@ -288,15 +288,16 @@ async def send_all(
     
     # Populate to notify waiting passengers
     populated = await populate_requests(pending, db)
+    serialized_requests = [serialize_doc(r) for r in populated]
     
     if sio:
-        for r in populated:
+        for r in serialized_requests:
             p_id = str(r["passenger"]["id"] if isinstance(r["passenger"], dict) else r["passenger"])
             await sio.emit("bus-sent", {
-                "requestId": str(r["_id"] if "_id" in r else r["id"]),
+                "requestId": r["id"],
                 "message": "Bus is on the way! 🚌",
-                "route": serialize_doc(r)["route"],
-                "stop": serialize_doc(r)["stop"]
+                "route": r["route"],
+                "stop": r["stop"]
             }, room=f"passenger:{p_id}")
             
     # Dispatch simulator bus

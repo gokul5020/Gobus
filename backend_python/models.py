@@ -75,6 +75,7 @@ class AdminDB(BaseModel):
 # Request Body validation schemas
 class PassengerLoginRequest(BaseModel):
     mobile: str
+    email: Optional[str] = None
 
 class VerifyOtpRequest(BaseModel):
     mobile: str

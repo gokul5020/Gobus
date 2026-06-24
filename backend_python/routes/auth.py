@@ -1,5 +1,6 @@
 import re
 import random
+import asyncio
 import logging
 from datetime import datetime, timedelta
 import jwt
@@ -10,6 +11,7 @@ from database import get_db
 from config import JWT_SECRET, OTP_EXPIRY_MINUTES
 from middleware.auth import auth_middleware
 from models import PassengerLoginRequest, VerifyOtpRequest, AdminLoginRequest
+from email_service import smtp_configured, send_otp_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -35,34 +37,44 @@ async def send_otp(body: PassengerLoginRequest):
         
     otp = generate_otp()
     expiry = datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES)
-    
-    # Upsert passenger
+    email = (body.email or "").strip() or None
+
+    # Upsert passenger (store email so we know where to deliver / resend the OTP)
     passenger = await db.passengers.find_one({"mobile": mobile})
     if not passenger:
-        passenger = {
+        await db.passengers.insert_one({
             "mobile": mobile,
+            "email": email,
             "otpCode": otp,
             "otpExpiry": expiry,
             "isVerified": False,
             "name": "",
             "createdAt": datetime.utcnow(),
-            "updatedAt": datetime.utcnow()
-        }
-        await db.passengers.insert_one(passenger)
+            "updatedAt": datetime.utcnow(),
+        })
     else:
-        await db.passengers.update_one(
-            {"_id": passenger["_id"]},
-            {"$set": {
-                "otpCode": otp,
-                "otpExpiry": expiry,
-                "updatedAt": datetime.utcnow()
-            }}
-        )
-        
+        update = {"otpCode": otp, "otpExpiry": expiry, "updatedAt": datetime.utcnow()}
+        if email:
+            update["email"] = email
+        await db.passengers.update_one({"_id": passenger["_id"]}, {"$set": update})
+        email = email or passenger.get("email")
+
+    # Always log to the server console (development fallback)
     logger.info("=" * 50)
     logger.info(f"OTP for {mobile}: {otp}  (valid for {OTP_EXPIRY_MINUTES} minutes)")
     logger.info("=" * 50)
-    return {"message": "OTP sent successfully", "mobile": mobile}
+
+    # Deliver by email when an address is available and SMTP is configured.
+    emailed = False
+    if email and smtp_configured():
+        try:
+            await asyncio.to_thread(send_otp_email, email, otp)
+            emailed = True
+            logger.info(f"OTP emailed to {email}")
+        except Exception as e:
+            logger.warning(f"Failed to email OTP to {email}: {e}")
+
+    return {"message": "OTP sent successfully", "mobile": mobile, "emailed": emailed}
 
 @router.post("/verify-otp")
 async def verify_otp(body: VerifyOtpRequest):
