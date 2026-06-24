@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-// In production set VITE_API_URL (e.g. https://gobus-backend.onrender.com/api).
+// Single-service deploy: the API lives at the same origin under /api.
+// Local dev: the backend runs separately on :5000.
+// Override with VITE_API_URL if you host the API elsewhere.
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api'),
   headers: { 'Content-Type': 'application/json' },
 });
 
