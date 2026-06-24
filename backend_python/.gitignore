@@ -1,0 +1,13 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Secrets / environment
+.env
+
+# Logs & local build artifacts
+*.log
+_geocode_cache.json
+_*.json
