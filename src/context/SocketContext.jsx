@@ -10,7 +10,9 @@ export function SocketProvider({ children }) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const socket = io('http://localhost:5000', { transports: ['websocket'] });
+    // In production set VITE_SOCKET_URL (e.g. https://gobus-backend.onrender.com).
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const socket = io(socketUrl, { transports: ['websocket', 'polling'] });
     socketRef.current = socket;
 
     socket.on('connect', () => {
