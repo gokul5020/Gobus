@@ -27,8 +27,10 @@ def serialize_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
             if "stops" in doc[field]:
                 # Exclude full stops nesting to avoid large payloads
                 del doc[field]["stops"]
-                
-    return doc
+
+    # jsonable_encoder makes the result safe for both the HTTP response and
+    # raw socket.io emits (converts datetime/ObjectId -> JSON primitives).
+    return jsonable_encoder(doc)
 
 async def populate_requests(req_list: List[Dict[str, Any]], db) -> List[Dict[str, Any]]:
     if not req_list:

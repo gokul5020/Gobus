@@ -81,7 +81,7 @@ def start_simulation(sio):
 
 async def dispatch_bus_to_stop(stop_id):
     db = get_db()
-    if not db:
+    if db is None:
         return
     try:
         stop = await db.busstops.find_one({"_id": ObjectId(stop_id)})
