@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, KeyRound, Bus, ArrowRight, RefreshCw } from 'lucide-react';
+import { Phone, Mail, KeyRound, Bus, ArrowRight, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 export default function PassengerLoginPage() {
   const [step, setStep] = useState(1); // 1 = enter mobile, 2 = enter OTP
   const [mobile, setMobile] = useState('');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -19,10 +20,14 @@ export default function PassengerLoginPage() {
       toast.error('Enter a valid 10-digit mobile number');
       return;
     }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Enter a valid email address');
+      return;
+    }
     setLoading(true);
     try {
-      await api.post('/auth/send-otp', { mobile });
-      toast.success('OTP sent!');
+      const res = await api.post('/auth/send-otp', { mobile, email });
+      toast.success(res.data?.emailed ? 'OTP sent to your email' : 'OTP sent');
       setStep(2);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send OTP');
@@ -41,7 +46,7 @@ export default function PassengerLoginPage() {
     try {
       const res = await api.post('/auth/verify-otp', { mobile, otp });
       login(res.data.token, { ...res.data.passenger, role: 'passenger' });
-      toast.success('Verified! Welcome aboard 🎉');
+      toast.success('Verified. Welcome aboard.');
       navigate('/request');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid OTP');
@@ -53,15 +58,15 @@ export default function PassengerLoginPage() {
   return (
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md animate-slide-up">
-        {/* Card */}
         <div className="card text-center">
-          {/* Icon */}
-          <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Bus className="text-white w-8 h-8" />
+          <div className="w-14 h-14 bg-brand rounded-xl flex items-center justify-center mx-auto mb-6">
+            <Bus className="text-white w-7 h-7" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Passenger Login</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">
-            {step === 1 ? 'Enter your mobile number to get an OTP' : `OTP sent to +91 ${mobile}`}
+            {step === 1
+              ? 'Enter your mobile number and email to receive a one-time code'
+              : email ? `OTP sent to ${email}` : `OTP generated for +91 ${mobile}`}
           </p>
 
           {/* Step indicators */}
@@ -85,6 +90,17 @@ export default function PassengerLoginPage() {
                   required
                 />
               </div>
+              <div className="relative">
+                <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="email"
+                  className="input-field pl-11"
+                  placeholder="Email address (to receive the code)"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
+              </div>
               <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
                 {loading ? <RefreshCw size={18} className="animate-spin" /> : <ArrowRight size={18} />}
                 {loading ? 'Sending OTP...' : 'Send OTP'}
@@ -97,7 +113,7 @@ export default function PassengerLoginPage() {
                 <input
                   type="text"
                   className="input-field pl-11 tracking-[0.4em] text-center text-lg font-semibold"
-                  placeholder="_ _ _ _ _ _"
+                  placeholder="------"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   maxLength={6}
@@ -114,7 +130,7 @@ export default function PassengerLoginPage() {
                 onClick={() => { setStep(1); setOtp(''); }}
                 className="w-full text-sm text-slate-500 hover:text-brand transition-colors"
               >
-                ← Change number
+                Change number
               </button>
             </form>
           )}
