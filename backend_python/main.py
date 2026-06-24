@@ -53,15 +53,22 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             content={"message": exc.detail}
         )
 
-# Add CORS Middleware
+# Add CORS Middleware.
+# Local dev origins plus any extra origins from FRONTEND_URL (comma-separated),
+# and any *.onrender.com host (covers the deployed Render static site).
+import os as _os
+_cors_origins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+]
+_extra = _os.getenv("FRONTEND_URL", "")
+_cors_origins += [o.strip() for o in _extra.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        'http://localhost:3000', 
-        'http://localhost:5173', 
-        'http://localhost:5174', 
-        'http://localhost:5175'
-    ],
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
