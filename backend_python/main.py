@@ -112,6 +112,31 @@ async def health_check():
     from datetime import datetime
     return {"status": "ok", "time": datetime.utcnow()}
 
+# ── Serve the built React frontend (single-service deployment) ───────────────
+# In Docker the Vite build is copied to backend_python/static. When present,
+# serve its assets and fall back to index.html for client-side routes so the
+# whole app lives behind one URL.
+import os
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+if STATIC_DIR.is_dir():
+    assets_dir = STATIC_DIR / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Let unmatched API calls 404 instead of returning the SPA shell.
+        if full_path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"message": "Not found"})
+        candidate = STATIC_DIR / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(STATIC_DIR / "index.html")
+
 # Combine FastAPI and Socket.io using ASGIApp
 sio_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
