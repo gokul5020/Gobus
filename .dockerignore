@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.gitignore
+*.log
+backend_python/venv
+backend_python/__pycache__
+backend_python/**/__pycache__
+backend_python/.pytest_cache
+backend_python/_*.json
+backend_python/.env
+.env

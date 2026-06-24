@@ -1,24 +1,20 @@
-# Render Blueprint for GoBus — deploys the FastAPI backend (web service) and
-# the Vite frontend (static site). MongoDB is your existing Atlas cluster.
+# Render Blueprint for GoBus — SINGLE service.
+# A Docker image builds the Vite frontend and serves it from the FastAPI
+# backend, so the whole app (React UI + /api + socket.io) lives behind ONE URL.
+# MongoDB is your existing Atlas cluster.
 #
-# Usage: Render Dashboard -> New -> Blueprint -> connect this repo.
-# Then fill the secret env vars marked "sync: false" (MONGO_URI, JWT_SECRET,
-# SMTP_USER, SMTP_PASS, SMTP_FROM). If Render appends a suffix to a service
-# name, update the URL env vars below to match the actual service URLs.
+# Usage: Render Dashboard -> Blueprints -> this repo -> Manual Sync.
+# Then fill the secret env vars marked "sync: false".
 
 services:
-  # ── Backend: FastAPI + Socket.IO ──────────────────────────────────────────
   - type: web
-    name: gobus-backend
-    runtime: python
-    rootDir: backend_python
+    name: gobus
+    runtime: docker
+    rootDir: .
+    dockerfilePath: ./Dockerfile
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:sio_app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.7"
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
@@ -39,22 +35,3 @@ services:
         sync: false
       - key: SMTP_FROM_NAME
         value: SmartBus
-      - key: FRONTEND_URL
-        value: https://gobus-frontend.onrender.com
-
-  # ── Frontend: Vite static site ────────────────────────────────────────────
-  - type: web
-    name: gobus-frontend
-    runtime: static
-    rootDir: .
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        value: https://gobus-backend.onrender.com/api
-      - key: VITE_SOCKET_URL
-        value: https://gobus-backend.onrender.com
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
