@@ -19,3 +19,6 @@ SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "SmartBus")
+
+# Brevo HTTP email API key (works where SMTP is blocked, e.g. Render free tier).
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")

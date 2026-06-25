@@ -11,7 +11,7 @@ from database import get_db
 from config import JWT_SECRET, OTP_EXPIRY_MINUTES
 from middleware.auth import auth_middleware
 from models import PassengerLoginRequest, VerifyOtpRequest, AdminLoginRequest
-from email_service import smtp_configured, send_otp_email
+from email_service import email_configured, send_otp_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -66,7 +66,7 @@ async def send_otp(body: PassengerLoginRequest):
 
     # Deliver by email when an address is available and SMTP is configured.
     emailed = False
-    if email and smtp_configured():
+    if email and email_configured():
         try:
             await asyncio.to_thread(send_otp_email, email, otp)
             emailed = True
